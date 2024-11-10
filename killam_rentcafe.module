@@ -1,0 +1,63 @@
+<?php
+
+/**
+ * Implements hook_cron().
+ */
+function killam_rentcafe_cron() {
+  $cron_last = \Drupal::state()->get('killam_rentcafe_cron_last', "110101");
+  $queue = \Drupal::queue("killam_rentcafe_unitsavailable");
+  $count = $queue->numberOfItems();
+  if (!($count > 0)) {
+    \Drupal::state()->set('killam_rentcafe_cron_last', time());
+    \Drupal::logger('rentcafe_queue')->notice(
+      "Refilling Properties Queue for the first time today:" . $cron_last
+    );
+    $result = _killam_rentcafe_fill_queue();
+    if (!empty($result)) {
+      \Drupal::logger('rentcafe_queue')->notice(
+        $result
+      );
+    }
+  }
+  else {
+    \Drupal::logger('rentcafe_queue')->warning(
+      "There are queue items left, even after 24 hours:" . $cron_last
+    );
+  }
+}
+
+/**
+ * Fills queue with properties to be queried.
+ *
+ * @param $property_nid
+ *   ID of Property object.
+ *
+ * @return string|void
+ */
+function _killam_rentcafe_fill_queue($property_nid = NULL) {
+  $queue = \Drupal::queue("killam_rentcafe_unitsavailable");
+  $count = $queue->numberOfItems();
+  if ($count > 0) {
+    return;
+  }
+  // Get the properties
+  $properties = \Drupal::entityQuery('node');
+
+  if (NULL !== $property_nid) {
+    $properties->condition('nid', $property_nid);
+  }
+  else {
+    $properties->condition('type', 'property')
+      ->condition('status', 1);
+  }
+  $node_ids = $properties->execute();
+  $nodes = \Drupal\node\Entity\Node::loadMultiple($node_ids);
+  $count = sizeof($nodes);
+
+  if (!empty($nodes)) {
+    foreach ($nodes as $property) {
+      $queue->createItem($property);
+    }
+  }
+  return "Filled Queue with $count properties.";
+}

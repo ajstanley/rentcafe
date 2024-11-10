@@ -1,0 +1,7 @@
+killam_rentcafe.settings:
+  path: '/admin/config/system/settings'
+  defaults:
+    _title: 'RentCafeAPISetting'
+    _form: 'Drupal\killam_rentcafe\Form\SettingsForm'
+  requirements:
+    _permission: 'administer site configuration'

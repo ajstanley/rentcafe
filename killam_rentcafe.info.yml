@@ -1,0 +1,7 @@
+name: Killam Rentcafe Integration
+description: Pulls available units from rentcafe api
+package: Killam
+
+type: module
+core: 8.x
+core_version_requirement: ^8 || ^9 || ^10

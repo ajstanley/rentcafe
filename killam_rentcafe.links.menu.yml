@@ -1,0 +1,6 @@
+killam_rentcafe.settings:
+  title: RentCafeAPISetting
+  description: API Settings
+  parent: system.admin_config_system
+  route_name: killam_rentcafe.settings
+  weight: 10

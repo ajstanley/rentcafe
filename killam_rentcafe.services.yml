@@ -1,0 +1,4 @@
+services:
+  logger.channel.rent_cafe:
+    parent: logger.channel_base
+    arguments: [ 'rent_cafe' ]
