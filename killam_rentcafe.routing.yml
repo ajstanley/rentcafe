@@ -5,3 +5,11 @@ killam_rentcafe.settings:
     _form: 'Drupal\killam_rentcafe\Form\SettingsForm'
   requirements:
     _permission: 'administer site configuration'
+
+killam_rentcafe.apitester:
+  path: '/killam-rentcafe/apitester'
+  defaults:
+    _title: 'Apitester'
+    _controller: '\Drupal\killam_rentcafe\Controller\KillamRentcafeController'
+  requirements:
+    _permission: 'access content'

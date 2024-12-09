@@ -2,3 +2,8 @@ services:
   logger.channel.rent_cafe:
     parent: logger.channel_base
     arguments: [ 'rent_cafe' ]
+
+  killam_rentcafe.yardi:
+    class: Drupal\killam_rentcafe\Yardi
+    arguments: ['@http_client', '@config.factory','@state']
+

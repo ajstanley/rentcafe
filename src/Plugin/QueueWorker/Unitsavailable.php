@@ -9,6 +9,7 @@ use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Logger\LoggerChannelInterface;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\Core\Queue\QueueWorkerBase;
+use Drupal\Core\State\StateInterface;
 use Drupal\Core\Url;
 use GuzzleHttp\ClientInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -32,6 +33,13 @@ final class Unitsavailable extends QueueWorkerBase implements ContainerFactoryPl
   protected $httpClient;
 
   /**
+   * State variable to hold token.
+   *
+   * @var \Drupal\Core\State\StateInterface
+   */
+  protected $state;
+
+  /**
    * Constructs a new Unitsavailable instance.
    */
   public function __construct(
@@ -42,9 +50,11 @@ final class Unitsavailable extends QueueWorkerBase implements ContainerFactoryPl
     private readonly EntityTypeManagerInterface $entityTypeManager,
     private readonly ConfigFactoryInterface $configFactory,
     ClientInterface $http_client,
+    StateInterface $state,
   ) {
     parent::__construct($configuration, $plugin_id, $plugin_definition);
     $this->httpClient = $http_client;
+    $this->state = $state;
   }
 
   /**
@@ -59,8 +69,16 @@ final class Unitsavailable extends QueueWorkerBase implements ContainerFactoryPl
       $container->get('entity_type.manager'),
       $container->get('config.factory'),
       $container->get('http_client'),
+      $container->get('state'),
     );
   }
+
+
+
+  /**
+   *
+   */
+
 
   /**
    * {@inheritdoc}
@@ -119,6 +137,24 @@ final class Unitsavailable extends QueueWorkerBase implements ContainerFactoryPl
       $retval = FALSE;
     }
     return $retval;
+  }
+
+  /**
+   *
+   */
+  private function _get_auth_key() {
+    $config = $this->configFactory->get('killam_rentcafe.settings');
+    $token_endpoint = $config->get('token_endpoint');
+    $form_params = [
+      'grant_type' => "password",
+      'client_id' => $config->get('client_id'),
+      'username' => $config->get('username'),
+      'password' => $config->get('password'),
+    ];
+    $response = $this->httpClient->request('post', $token_endpoint, [
+      'form_params' => $form_params,
+      'headers' => ['Accept' => 'application/json'],
+    ]);
   }
 
 }
