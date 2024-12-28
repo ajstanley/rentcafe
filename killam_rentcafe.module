@@ -41,6 +41,7 @@ function _killam_rentcafe_fill_queue($property_nid = NULL) {
     return;
   }
   // Get the properties
+
   $properties = \Drupal::entityQuery('node');
 
   if (NULL !== $property_nid) {
@@ -50,6 +51,7 @@ function _killam_rentcafe_fill_queue($property_nid = NULL) {
     $properties->condition('type', 'property')
       ->condition('status', 1);
   }
+  $properties->accessCheck(TRUE);
   $node_ids = $properties->execute();
   $nodes = \Drupal\node\Entity\Node::loadMultiple($node_ids);
   $count = sizeof($nodes);

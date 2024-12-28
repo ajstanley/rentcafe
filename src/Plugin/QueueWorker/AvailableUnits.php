@@ -153,7 +153,6 @@ class AvailableUnits extends QueueWorkerBase implements ContainerFactoryPluginIn
     );
     $units = Json::decode($response->getBody());
 
-
     $floorplan_url = Url::fromUri('https://api.rentcafe.com/rentcafeapi.aspx', ['query' => $floorplan_data]);
     $floorplan_response = \Drupal::httpClient()->get(
       $floorplan_url->toString(),

@@ -5,5 +5,5 @@ services:
 
   killam_rentcafe.yardi:
     class: Drupal\killam_rentcafe\Yardi
-    arguments: ['@http_client', '@config.factory','@state']
+    arguments: ['@http_client', '@config.factory','@state', '@logger.channel.rent_cafe']
 
