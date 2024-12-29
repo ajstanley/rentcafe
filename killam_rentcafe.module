@@ -4,8 +4,11 @@
  * Implements hook_cron().
  */
 function killam_rentcafe_cron() {
+  $queue_name = 'killam_rentcafe_unitsavailable';
+  $queue_worker = \Drupal::service('plugin.manager.queue_worker')
+    ->createInstance($queue_name);
   $cron_last = \Drupal::state()->get('killam_rentcafe_cron_last', "110101");
-  $queue = \Drupal::queue("killam_rentcafe_unitsavailable");
+  $queue = \Drupal::queue($queue_name);
   $count = $queue->numberOfItems();
   if (!($count > 0)) {
     \Drupal::state()->set('killam_rentcafe_cron_last', time());
@@ -20,9 +23,25 @@ function killam_rentcafe_cron() {
     }
   }
   else {
-    \Drupal::logger('rentcafe_queue')->warning(
-      "There are queue items left, even after 24 hours:" . $cron_last
-    );
+    while ($item = $queue->claimItem()) {
+      try {
+        // Process the item.
+        $queue_worker->processItem($item->data);
+        // Delete the item after successful processing.
+        $queue->deleteItem($item);
+      }
+      catch (\Exception $e) {
+        // Release the item if an error occurs during processing.
+        $queue->releaseItem($item);
+        \Drupal::logger('queue_worker')
+          ->error('Error processing queue item: @message', ['@message' => $e->getMessage()]);
+      }
+      finally {
+        \Drupal::logger('rentcafe_queue')->warning(
+          "There are queue items left, even after 24 hours:" . $cron_last
+        );
+      }
+    }
   }
 }
 
