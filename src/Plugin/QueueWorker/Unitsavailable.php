@@ -166,8 +166,8 @@ final class Unitsavailable extends QueueWorkerBase implements ContainerFactoryPl
         $node->set('field_available_date_changed', date('Y-m-d g:i:s', time()));
       }
 
-      if (!empty($unit['floorplanId']) && !empty($floorplans[$unit['floorplanId']])) {
-        $floorplan_url = $floorplans[$unit['floorplanId']]['floorplanImageURL'];
+      if (!empty($unit['floorplanId']) && !empty($floorplans[$unit['floorplanId']]) && !empty($floorplans[$unit['floorplanId']]['floorplanImageURLArray'])) {
+        $floorplan_url = $floorplans[$unit['floorplanId']]['floorplanImageURLArray'][0];
         $destination = "public://rentcafefloorplans";
         $this->fileSystem->prepareDirectory($destination, FileSystemInterface::CREATE_DIRECTORY);
         $file_content = file_get_contents($floorplan_url);

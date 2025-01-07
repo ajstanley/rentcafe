@@ -5,80 +5,86 @@
  */
 function killam_rentcafe_cron() {
   $queue_name = 'killam_rentcafe_unitsavailable';
-  $queue_worker = \Drupal::service('plugin.manager.queue_worker')
-    ->createInstance($queue_name);
+  $queue_worker = \Drupal::service('plugin.manager.queue_worker')->createInstance($queue_name);
   $cron_last = \Drupal::state()->get('killam_rentcafe_cron_last', "110101");
   $queue = \Drupal::queue($queue_name);
-  $count = $queue->numberOfItems();
-  if (!($count > 0)) {
+
+  if ($queue->numberOfItems() === 0) {
+    // Refill the queue if it's empty.
     \Drupal::state()->set('killam_rentcafe_cron_last', time());
-    \Drupal::logger('rentcafe_queue')->notice(
-      "Refilling Properties Queue for the first time today:" . $cron_last
-    );
+    \Drupal::logger('rentcafe_queue')->notice("Refilling Properties Queue for the first time today: $cron_last");
     $result = _killam_rentcafe_fill_queue();
-    if (!empty($result)) {
-      \Drupal::logger('rentcafe_queue')->notice(
-        $result
-      );
+
+    if ($result) {
+      \Drupal::logger('rentcafe_queue')->notice($result);
     }
+  } else {
+    // Process existing queue items.
+    process_queue_items($queue, $queue_worker);
   }
-  else {
-    while ($item = $queue->claimItem()) {
-      try {
-        // Process the item.
-        $queue_worker->processItem($item->data);
-        // Delete the item after successful processing.
-        $queue->deleteItem($item);
-      }
-      catch (\Exception $e) {
-        // Release the item if an error occurs during processing.
-        $queue->releaseItem($item);
-        \Drupal::logger('queue_worker')
-          ->error('Error processing queue item: @message', ['@message' => $e->getMessage()]);
-      }
-      finally {
-        \Drupal::logger('rentcafe_queue')->warning(
-          "There are queue items left, even after 24 hours:" . $cron_last
-        );
-      }
+}
+
+/**
+ * Processes items in the queue.
+ *
+ * @param \Drupal\Core\Queue\QueueInterface $queue
+ *   The queue service.
+ * @param \Drupal\Core\Queue\QueueWorkerInterface $queue_worker
+ *   The queue worker service.
+ */
+function process_queue_items($queue, $queue_worker) {
+  while ($item = $queue->claimItem()) {
+    try {
+      // Process the item.
+      $queue_worker->processItem($item->data);
+      // Delete the item after successful processing.
+      $queue->deleteItem($item);
+    } catch (\Exception $e) {
+      // Release the item and log an error if processing fails.
+      $queue->releaseItem($item);
+      \Drupal::logger('queue_worker')->error('Error processing queue item: @message', ['@message' => $e->getMessage()]);
     }
   }
 }
 
 /**
- * Fills queue with properties to be queried.
+ * Fills the queue with property nodes to be processed.
  *
- * @param $property_nid
- *   ID of Property object.
+ * @param int|null $property_nid
+ *   Optional: ID of a specific property node to queue.
  *
- * @return string|void
+ * @return string
+ *   A message indicating the number of properties added to the queue.
  */
 function _killam_rentcafe_fill_queue($property_nid = NULL) {
   $queue = \Drupal::queue("killam_rentcafe_unitsavailable");
-  $count = $queue->numberOfItems();
-  if ($count > 0) {
-    return;
-  }
-  // Get the properties
 
-  $properties = \Drupal::entityQuery('node');
+  // Skip if the queue already has items.
+  if ($queue->numberOfItems() > 0) {
+    return "Queue already contains items.";
+  }
 
-  if (NULL !== $property_nid) {
-    $properties->condition('nid', $property_nid);
+  // Query properties based on the given criteria.
+  $query = \Drupal::entityQuery('node');
+
+  if ($property_nid !== NULL) {
+    $query->condition('nid', $property_nid);
+  } else {
+    $query->condition('type', 'property')->condition('status', 1);
   }
-  else {
-    $properties->condition('type', 'property')
-      ->condition('status', 1);
+
+  $query->accessCheck(TRUE);
+  $node_ids = $query->execute();
+
+  if (empty($node_ids)) {
+    return "No properties found to add to the queue.";
   }
-  $properties->accessCheck(TRUE);
-  $node_ids = $properties->execute();
+
   $nodes = \Drupal\node\Entity\Node::loadMultiple($node_ids);
-  $count = sizeof($nodes);
-
-  if (!empty($nodes)) {
-    foreach ($nodes as $property) {
-      $queue->createItem($property);
-    }
+  foreach ($nodes as $property) {
+    $queue->createItem($property);
   }
+
+  $count = count($nodes);
   return "Filled Queue with $count properties.";
 }

@@ -35,30 +35,40 @@ final class AddIdController extends ControllerBase {
    * Builds the response.
    */
   public function __invoke(): array {
-    $mappings = $this->get_mapping();
-    foreach ($mappings as $pcode => $bcode) {
-      $query = $this->entityTypeManager->getStorage('node')->getQuery();
-      $nids = $query
-        ->condition('field_building_code', $bcode)
+    $mappings = $this->getMapping();
+    foreach ($mappings as $propertyCode => $buildingCode) {
+      $nids = $this->entityTypeManager->getStorage('node')
+        ->getQuery()
+        ->condition('field_building_code', $buildingCode)
         ->condition('type', 'property')
         ->accessCheck(FALSE)
         ->execute();
-      if ($nids) {
+
+      if (!empty($nids)) {
         $nid = reset($nids);
         $property = $this->entityTypeManager->getStorage('node')->load($nid);
-        $property->set('field_rentcafe_property_code', $pcode);
-        $property->save();
+        if ($property) {
+          $property->set('field_rentcafe_property_code', $propertyCode);
+          $property->save();
+        }
       }
     }
-    $build['content'] = [
-      '#type' => 'item',
-      '#markup' => $this->t('Successfully added Rentcafe Property Ids.'),
-    ];
 
-    return $build;
+    return [
+      'content' => [
+        '#type' => 'item',
+        '#markup' => $this->t('Successfully added Rentcafe Property IDs.'),
+      ],
+    ];
   }
 
-  public function get_mapping() {
+  /**
+   * Provides a mapping of property codes to building codes.
+   *
+   * @return array
+   *   An associative array of property codes to building codes.
+   */
+  public function getMapping() {
     return [
       "p1817724" => "victoria",
       "p1817725" => "killick",
