@@ -14,10 +14,3 @@ killam_rentcafe.apitester:
   requirements:
     _permission: 'access content'
 
-killam_rentcafe.add_id:
-  path: '/killam-rentcafe/add-id'
-  defaults:
-    _title: 'Add Id'
-    _controller: '\Drupal\killam_rentcafe\Controller\AddIdController'
-  requirements:
-    _permission: 'access content'
