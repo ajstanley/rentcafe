@@ -6,8 +6,8 @@ namespace Drupal\killam_rentcafe;
 
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\State\StateInterface;
+use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
-use Psr\Http\Client\ClientInterface;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -35,7 +35,7 @@ final class Yardi {
    * Constructs a Yardi object.
    */
   public function __construct(
-    private readonly ClientInterface $httpClient,
+    private readonly Client $httpClient,
     private readonly ConfigFactoryInterface $configFactory,
     private readonly StateInterface $state,
     LoggerInterface $logger,

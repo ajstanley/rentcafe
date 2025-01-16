@@ -105,6 +105,10 @@ final class Unitsavailable extends QueueWorkerBase implements ContainerFactoryPl
     }
     $field_value = $property->get('field_rentcafe_property_code')->getValue();
     $property_code = !empty($field_value) ? $field_value[0]['value'] : NULL;
+    if (!$property_code) {
+      $this->loggerChannelRentCafe->notice("Property {$property->label()} does not have a property code");
+      return;
+    }
     $units = $this->killamRentcafeYardi->getAvailability($property_code);
     $floorplans = $this->killamRentcafeYardi->getFloorplan($property_code);
 

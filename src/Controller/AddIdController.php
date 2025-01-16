@@ -8,12 +8,13 @@ use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Database\Connection;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Drupal\Core\DependencyInjection\DependencySerializationTrait;
 
 /**
  * This controller populates the newly minted field_rentcafe_property_code.
  */
 final class AddIdController extends ControllerBase {
-
+ use DependencySerializationTrait;
   /**
    * The controller constructor.
    */
@@ -34,32 +35,54 @@ final class AddIdController extends ControllerBase {
   /**
    * Builds the response.
    */
-  public function __invoke(): array {
-    $mappings = $this->getMapping();
-    foreach ($mappings as $propertyCode => $buildingCode) {
-      $nids = $this->entityTypeManager->getStorage('node')
-        ->getQuery()
-        ->condition('field_building_code', $buildingCode)
-        ->condition('type', 'property')
-        ->accessCheck(FALSE)
-        ->execute();
 
-      if (!empty($nids)) {
-        $nid = reset($nids);
-        $property = $this->entityTypeManager->getStorage('node')->load($nid);
-        if ($property) {
-          $property->set('field_rentcafe_property_code', $propertyCode);
-          $property->save();
-        }
-      }
+  public function __invoke() {
+    $mappings = $this->getMapping();
+
+    // Process mappings in chunks
+    $batch = [
+      'title' => t('Processing property mappings...'),
+      'operations' => [],
+      'finished' => [$this, 'batchFinishedCallback'],
+    ];
+
+    foreach ($mappings as $propertyCode => $buildingCode) {
+      $batch['operations'][] = [
+        [$this, 'processMapping'],
+        [$propertyCode, $buildingCode],
+      ];
     }
 
-    return [
-      'content' => [
-        '#type' => 'item',
-        '#markup' => $this->t('Successfully added Rentcafe Property IDs.'),
-      ],
-    ];
+    batch_set($batch);
+    return batch_process();
+  }
+
+  public function processMapping($propertyCode, $buildingCode, &$context) {
+    $entityTypeManager = \Drupal::service('entity_type.manager');
+    $nids = $entityTypeManager->getStorage('node')
+      ->getQuery()
+      ->condition('field_building_code', $buildingCode)
+      ->condition('type', 'property')
+      ->accessCheck(FALSE)
+      ->execute();
+
+    if (!empty($nids)) {
+      $nid = reset($nids);
+      $property = $entityTypeManager->getStorage('node')->load($nid);
+      if ($property) {
+        $property->set('field_rentcafe_property_code', $propertyCode);
+        $property->save();
+      }
+    }
+  }
+
+  public function batchFinishedCallback($success, $results, $operations) {
+    if ($success) {
+      drupal_set_message(t('All property mappings were processed successfully.'));
+    }
+    else {
+      drupal_set_message(t('Some property mappings were not processed. Please try again.'), 'error');
+    }
   }
 
   /**
@@ -320,3 +343,4 @@ final class AddIdController extends ControllerBase {
   }
 
 }
+
