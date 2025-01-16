@@ -174,7 +174,12 @@ final class Unitsavailable extends QueueWorkerBase implements ContainerFactoryPl
         $floorplan_url = $floorplans[$unit['floorplanId']]['floorplanImageURLArray'][0];
         $destination = "public://rentcafefloorplans";
         $this->fileSystem->prepareDirectory($destination, FileSystemInterface::CREATE_DIRECTORY);
-        $file_content = file_get_contents($floorplan_url);
+        $context = stream_context_create([
+          "http" => [
+            "header" => "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+          ],
+        ]);
+        $file_content = file_get_contents($floorplan_url, FALSE, $context);
         $file_name = basename($floorplan_url);
         $target_uri = $destination . $file_name;
         $file_uri = $this->fileSystem->saveData($file_content, $target_uri, FileSystemInterface::EXISTS_REPLACE);
