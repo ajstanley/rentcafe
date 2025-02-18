@@ -109,6 +109,15 @@ final class Unitsavailable extends QueueWorkerBase implements ContainerFactoryPl
       $this->loggerChannelRentCafe->notice("Property {$property->label()} does not have a property code");
       return;
     }
+    // Delete all existing unit nodes related to this Property.
+    $property_nid = $property->id();
+    $unit_nids = $this->entityTypeManager
+      ->getStorage("node")
+      ->getQuery()
+      ->condition("type", "unit")
+      ->condition("field_property", $property_nid)
+      ->accessCheck(TRUE)
+      ->execute();
     $units = $this->killamRentcafeYardi->getAvailability($property_code);
     $floorplans = $this->killamRentcafeYardi->getFloorplan($property_code);
 
@@ -125,6 +134,10 @@ final class Unitsavailable extends QueueWorkerBase implements ContainerFactoryPl
       $results = $query->execute();
       if (count($results) === 1) {
         $nid = reset($results);
+        $key = array_search($nid, $unit_nids);
+        if ($key !== FALSE) {
+          unset($unit_nids[$key]);
+        }
         $node = $this->entityTypeManager->getStorage('node')->load($nid);
         $current_available_date = NULL;
         $field_value = $node->get('field_available_date')->getValue();
@@ -200,6 +213,12 @@ final class Unitsavailable extends QueueWorkerBase implements ContainerFactoryPl
       }
       catch (\Exception $e) {
         $this->loggerChannelRentCafe->notice("Exception on node save:" . $e->getMessage());
+      }
+    }
+    if (!empty($unit_nids)) {
+      $nodes = $this->entityTypeManager->getStorage('node')->loadMultiple($unit_nids);
+      foreach ($nodes as $node) {
+        $node->delete();
       }
     }
   }
