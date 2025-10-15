@@ -47,7 +47,7 @@ final class KillamRentcafeController extends ControllerBase {
    */
   public function __invoke(): array {
     $property_code = 'p0510278';
-    $property_nid = '472';
+    $property_nid = '522';
     $node = $this->entityTypeManager->getStorage('node')->load($property_nid);
     $plugin_id = 'killam_rentcafe_unitsavailable';
     $queue_worker = $this->queueWorkerManager->createInstance($plugin_id);

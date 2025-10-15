@@ -118,7 +118,11 @@ final class Unitsavailable extends QueueWorkerBase implements ContainerFactoryPl
       ->condition("field_property", $property_nid)
       ->accessCheck(TRUE)
       ->execute();
-    $units = $this->killamRentcafeYardi->getAvailability($property_code);
+    $yardi_unit_data = $this->killamRentcafeYardi->getAvailability($property_code);
+    if ($yardi_unit_data['code'] == '304') {
+      return;
+    }
+    $units = $yardi_unit_data['unit_data'];
     $floorplans = $this->killamRentcafeYardi->getFloorplan($property_code);
 
     foreach ($units as $unit) {
@@ -132,6 +136,11 @@ final class Unitsavailable extends QueueWorkerBase implements ContainerFactoryPl
         ->accessCheck(TRUE)
         ->condition('field_rentcafe_apartment_id', $unit['apartmentId']);
       $results = $query->execute();
+      $date_to_test = $unit['availableDate'];
+      $inputDate = \DateTime::createFromFormat('m/d/Y', $date_to_test);
+      $today = new \DateTime();
+      $nineMonthsLater = (clone $today)->add(new \DateInterval('P9M'));
+      $status = $inputDate <= $nineMonthsLater;
       if (count($results) === 1) {
         $nid = reset($results);
         $key = array_search($nid, $unit_nids);
@@ -147,8 +156,8 @@ final class Unitsavailable extends QueueWorkerBase implements ContainerFactoryPl
         if ($current_available_date != date('Y-m-d', strtotime($unit['availableDate']))) {
           $node->set('field_available_date_changed', date('Y-m-d g:i:s', time()));
         }
-        $node->set('status', 1);
         $node->set('field_available_date', date('Y-m-d', strtotime($unit['availableDate'])));
+        $node->set('status', $status);
         $node->set('field_property', $property->id());
         $node->set('field_bedrooms', $unit['beds']);
         $node->set('field_number_of_bedrooms', $unit['beds']);
@@ -164,7 +173,7 @@ final class Unitsavailable extends QueueWorkerBase implements ContainerFactoryPl
         $node = Node::create([
           'type' => 'unit',
           'title' => $property->title->value . ' - ' . $unit['floorplanName'] . ' - ' . $unit['propertyId'],
-          'status' => 1,
+          'status' => $status,
           'promote' => 0,
           'sticky' => 0,
           'comment' => 1,
@@ -216,7 +225,8 @@ final class Unitsavailable extends QueueWorkerBase implements ContainerFactoryPl
       }
     }
     if (!empty($unit_nids)) {
-      $nodes = $this->entityTypeManager->getStorage('node')->loadMultiple($unit_nids);
+      $nodes = $this->entityTypeManager->getStorage('node')
+        ->loadMultiple($unit_nids);
       foreach ($nodes as $node) {
         $node->delete();
       }

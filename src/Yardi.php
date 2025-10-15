@@ -138,13 +138,13 @@ final class Yardi {
    * @return array
    *   Availabililty data from Yardi.
    */
-  public function getAvailability($property_code) {
-    $availablilty_url = '/apartmentavailability/getapartmentavailability';
-    $unit_data = $this->getYardiData($availablilty_url, $property_code);
-    if (!empty($unit_data['apartmentAvailabilities'])) {
-      return $unit_data['apartmentAvailabilities'];
-    }
-    return [];
+  public function getAvailability(string $property_code): array {
+    $availability_url = '/apartmentavailability/getapartmentavailability';
+    $unit_data = $this->getYardiData($availability_url, $property_code);
+    return [
+      'code' => $unit_data['errorCode'] ?? NULL,
+      'unit_data' => $unit_data['apartmentAvailabilities'] ?? [],
+    ];
   }
 
   /**
